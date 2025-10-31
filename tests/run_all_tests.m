@@ -6,35 +6,43 @@ function run_all_tests()
     fprintf('Running Nova Carter Test Suite\n');
     fprintf('========================================\n\n');
     
-    % Define test files
-    test_files = {
+    % Define test functions
+    test_functions = {
+        @test_parameters
+        @test_kinematic_model
+        % Add more test functions here as you create them
+    };
+    
+    test_names = {
         'test_parameters'
         'test_kinematic_model'
-        % Add more test files here as you create them
     };
     
     % Initialize results structure
     results = struct();
     
     % Run each test
-    for i = 1:length(test_files)
-        test_name = test_files{i};
+    for i = 1:length(test_functions)
+        test_name = test_names{i};
         fprintf('Running %s...\n', test_name);
+        fprintf('----------------------------------------\n');
         
         try
-            % Run the test
-            run(test_name);
+            % Run the test function
+            test_functions{i}();
             results.(test_name) = 'PASSED';
-            fprintf('  ✓ PASSED\n\n');
+            fprintf('----------------------------------------\n');
+            fprintf('✓ %s PASSED\n\n', test_name);
         catch ME
-            % Fix: Use test_files{i} instead of test_name (which is cleared)
-            results.(test_files{i}) = 'FAILED';
-            fprintf('  ✗ FAILED: %s\n', ME.message);
+            results.(test_name) = 'FAILED';
+            fprintf('----------------------------------------\n');
+            fprintf('✗ %s FAILED\n', test_name);
+            fprintf('  Error: %s\n', ME.message);
             if ~isempty(ME.stack)
-                fprintf('     at: %s (line %d)\n\n', ...
+                fprintf('  Location: %s (line %d)\n\n', ...
                         ME.stack(1).name, ME.stack(1).line);
             else
-                fprintf('     (no stack trace available)\n\n');
+                fprintf('  (no stack trace available)\n\n');
             end
         end
     end
@@ -45,19 +53,19 @@ function run_all_tests()
     fprintf('========================================\n');
     
     % Count results
-    test_names = fieldnames(results);
+    test_result_names = fieldnames(results);
     passed = 0;
     failed = 0;
     
-    for i = 1:length(test_names)
-        if strcmp(results.(test_names{i}), 'PASSED')
+    for i = 1:length(test_result_names)
+        if strcmp(results.(test_result_names{i}), 'PASSED')
             passed = passed + 1;
         else
             failed = failed + 1;
         end
     end
     
-    total = length(test_names);
+    total = length(test_result_names);
     fprintf('Results: %d/%d tests passed', passed, total);
     if failed > 0
         fprintf(', %d failed', failed);
@@ -73,12 +81,12 @@ function run_all_tests()
     
     % Display detailed results
     fprintf('Detailed Results:\n');
-    for i = 1:length(test_names)
-        status = results.(test_names{i});
+    for i = 1:length(test_result_names)
+        status = results.(test_result_names{i});
         if strcmp(status, 'PASSED')
-            fprintf('  ✓ %s: PASSED\n', test_names{i});
+            fprintf('  ✓ %s: PASSED\n', test_result_names{i});
         else
-            fprintf('  ✗ %s: FAILED\n', test_names{i});
+            fprintf('  ✗ %s: FAILED\n', test_result_names{i});
         end
     end
     fprintf('\n');
