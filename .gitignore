@@ -1,0 +1,42 @@
+# MATLAB autosave and temporary files
+*.asv
+*.m~
+*.autosave
+
+# MATLAB slprj (Simulink cache)
+slprj/
+*.slxc
+
+# Data files (too large for git - use Git LFS if needed)
+*.mat
+data/*.mat
+
+# Figures and videos (regenerate these)
+*.fig
+*.png
+*.jpg
+*.avi
+*.mp4
+
+# OS-specific
+.DS_Store
+Thumbs.db
+*~
+
+# IDE
+.vscode/
+.idea/
+
+# Compiled MEX files
+*.mex*
+*.mexa64
+*.mexw64
+*.mexmaci64
+
+# Build artifacts
+build/
+dist/
+
+# Logs
+*.log
+logs/
