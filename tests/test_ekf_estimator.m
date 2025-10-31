@@ -230,6 +230,40 @@ function test_ekf_estimator()
         fprintf('  • Gyro bias estimation working\n');
         fprintf('  • Position drift acceptable without GPS\n');
         fprintf('======================================================\n\n');
+
+        figure('Name', 'Sensor Noise Visualization', 'Position', [100 100 1200 600]);
+
+        subplot(2,2,1);
+        plot(t, z_enc_all(1,:), 'r.', 'MarkerSize', 4); hold on;
+        plot(t, x_true(4,:), 'g-', 'LineWidth', 2);
+        grid on;
+        xlabel('Time (s)'); ylabel('v (m/s)');
+        title('Encoder Linear Velocity');
+        legend('Measured', 'True');
+        
+        subplot(2,2,2);
+        plot(t, z_enc_all(2,:), 'b.', 'MarkerSize', 4); hold on;
+        plot(t, x_true(5,:), 'g-', 'LineWidth', 2);
+        grid on;
+        xlabel('Time (s)'); ylabel('\omega (rad/s)');
+        title('Encoder Angular Velocity');
+        legend('Measured', 'True');
+        
+        subplot(2,2,3);
+        plot(t, z_imu_all, 'm.', 'MarkerSize', 4); hold on;
+        plot(t, x_true(5,:), 'g-', 'LineWidth', 2);
+        grid on;
+        xlabel('Time (s)'); ylabel('\omega (rad/s)');
+        title('IMU Angular Velocity');
+        legend('Measured (IMU)', 'True');
+        
+        subplot(2,2,4);
+        plot(t, z_imu_all - x_true(5,:), 'k-', 'LineWidth', 1.5);
+        grid on;
+        xlabel('Time (s)'); ylabel('Error (rad/s)');
+        title('IMU Bias + Noise');
+
+
     else
         fprintf('\n  ⚠ Review results\n\n');
     end
