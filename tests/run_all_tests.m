@@ -10,6 +10,8 @@ function run_all_tests()
     test_functions = {
         @test_parameters
         @test_kinematic_model
+        @test_open_loop_wheel_commands
+        
         % Add more test functions here as you create them
     };
     
