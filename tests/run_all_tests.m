@@ -16,6 +16,7 @@ function run_all_tests()
     test_names = {
         'test_parameters'
         'test_kinematic_model'
+        'test_open_loop_wheel_commands'
     };
     
     % Initialize results structure
