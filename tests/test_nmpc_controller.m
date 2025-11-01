@@ -26,7 +26,7 @@ function test_nmpc_controller()
     fprintf('-------------------------------\n');
     
     % Initialize NMPC
-    N = 20;              % Prediction horizon (20 steps)
+    N = 10;              % Prediction horizon (20 steps)
     Q = diag([10, 10, 1]);    % State weights [x, y, θ]
     R = diag([0.1, 0.1]);     % Control weights [v, ω]
     S = diag([1.0, 1.0]);     %// Smoothness weights
@@ -36,7 +36,7 @@ function test_nmpc_controller()
     params = nova_carter_params();
     
     % Simulation parameters
-    T_sim = 10.0;
+    T_sim = 5.0;
     dt = params.dt;
     N_steps = round(T_sim / dt);
     
@@ -52,6 +52,7 @@ function test_nmpc_controller()
     u_history = zeros(2, N_steps);
     x_history(:,1) = x_current;
     
+
     % Simulation loop
     fprintf('  Running simulation...\n');
     for k = 1:N_steps
@@ -60,7 +61,7 @@ function test_nmpc_controller()
         
         % Solve NMPC
         [u_opt, ~, ~] = nmpc.solve(x_current, x_ref_segment, u_last);
-        
+    
         % Apply control (simulate robot response)
         model = differential_drive_model();
         x_current = model.dynamics_discrete(x_current, u_opt);
@@ -72,7 +73,7 @@ function test_nmpc_controller()
     end
     
     fprintf('  ✓ Simulation complete\n');
-    nmpc.print_diagnostics();
+    % nmpc.print_diagnostics();
     
     % Plot results
     plot_tracking_results(x_history, u_history, x_ref, dt, 'Test 1: Straight Line');

@@ -222,13 +222,18 @@ classdef nmpc_controller
             obj.cost = cost_val;
             obj.exitflag = exitflag;
             obj.iterations = output.iterations;
-            
-            % Warn if optimization failed
-            if exitflag <= 0
-                warning('NMPC: Optimization did not converge (exitflag=%d, iter=%d)', ...
-                    exitflag, obj.iterations);
+            if obj.iterations > 0 && mod(obj.iterations, 10) == 0
+                obj.print_diagnostics();
             end
             
+            % Warn if optimization failed
+            if exitflag < 0
+                warning('NMPC: Optimization failed (exitflag=%d, iter=%d)', exitflag, obj.iterations);
+            % elseif exitflag == 0 && mod(obj.iterations, 10)
+            % 
+            %     fprintf('[NMPC] Optimization reached iteration limit (exitflag=0, iter=%d)\n', obj.iterations);
+            end
+                        
             % Extract results
             u_sequence = reshape(u_solution, 2, obj.N);  % Reshape to 2xN
             u_opt = u_sequence(:, 1);  % First control action (apply this!)
@@ -238,6 +243,8 @@ classdef nmpc_controller
             
             % Compute predicted trajectory (for visualization/debugging)
             x_predicted = obj.predict_trajectory(x_current, u_sequence);
+            
+
         end
         
         function J = cost_function(obj, u_vec, x_current, x_ref_traj, u_last)
