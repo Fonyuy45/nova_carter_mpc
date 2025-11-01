@@ -11,6 +11,8 @@ function run_all_tests()
         @test_parameters
         @test_kinematic_model
         @test_open_loop_wheel_commands
+        @test_ekf_estimator
+
         
         % Add more test functions here as you create them
     };
@@ -19,6 +21,7 @@ function run_all_tests()
         'test_parameters'
         'test_kinematic_model'
         'test_open_loop_wheel_commands'
+        'test_ekf_estimator'
     };
     
     % Initialize results structure
