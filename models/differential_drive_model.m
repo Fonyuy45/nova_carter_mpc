@@ -75,6 +75,18 @@ classdef differential_drive_model
                  0,          1];
         end
         
+
+        function [phi_dot_L, phi_dot_R] = convert_to_wheel_speeds(obj, u_cmd)
+            v = u_cmd(1);
+            omega = u_cmd(2);
+            r = obj.params.wheel_radius;
+            L = obj.params.track_width;
+    
+            phi_dot_R = (v + omega * L/2) / r;
+            phi_dot_L = (v - omega * L/2) / r;
+        end
+
+        
         function valid = checkConstraints(obj, x, u, u_prev)
             % Check if state and input satisfy constraints
             
