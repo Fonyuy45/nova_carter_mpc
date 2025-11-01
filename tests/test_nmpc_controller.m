@@ -26,7 +26,7 @@ function test_nmpc_controller()
     fprintf('-------------------------------\n');
     
     % Initialize NMPC
-    N = 10;              % Prediction horizon (20 steps)
+    N = 8;              % Prediction horizon (20 steps)
     Q = diag([10, 10, 1]);    % State weights [x, y, θ]
     R = diag([0.1, 0.1]);     % Control weights [v, ω]
     S = diag([1.0, 1.0]);     %// Smoothness weights
@@ -36,7 +36,7 @@ function test_nmpc_controller()
     params = nova_carter_params();
     
     % Simulation parameters
-    T_sim = 5.0;
+    T_sim = 30.0;
     dt = params.dt;
     N_steps = round(T_sim / dt);
     
