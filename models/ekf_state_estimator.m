@@ -1,4 +1,3 @@
-% %/
 % %% ekf_state_estimator.m
 % % Extended Kalman Filter for differential drive robot state estimation
 % %
