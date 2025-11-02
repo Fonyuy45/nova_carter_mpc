@@ -8,58 +8,44 @@ function test_closed_loop_autonomy()
     params = nova_carter_params();
     dt = params.dt;
     
-    T_sim = 90.0;
+    T_sim =250.0;
 
 
     N_steps = round(T_sim / dt);
     fk_model = forward_kinematics();
 
-    radius = 3.0;         % meters
-    arc_angle = pi/2;     % 90 degrees
-    v_nominal = 1.0;      % m/s
+    % radius = 3.0;         % meters
+    % arc_angle = pi/2;     % 90 degrees
+    % v_nominal = 1.0;      % m/s
 
+    % radius = 5.0;
 
-    % Reference trajectory: circular path
-    radius = 5.0;
-    % x_ref = generate_circular_reference(N_steps, 30, dt, radius);
-    % x_ref = generate_spiral_reference(N_steps, N_mpc, dt, 0.1, 0.5);
 
     %% 2. NMPC Parameters
-    N_mpc = 10;
+    N_mpc = 30;
 
     start_time = 2.0;
 
-    % x_ref = generate_figure8_reference(N_steps, N_mpc, dt, 5.0, 1.0)
-    % x_ref = generate_sine_reference(N_steps, 30, dt, 1.0, 0.05, 1.0);
-    % x_ref = generate_circular_reference(N_steps, N_mpc, dt, radius);
     % x_ref = generate_spiral_reference(N_steps, N_mpc, dt, 0.1, 0.5);
-    %x_ref = generate_arc_reference(N_steps, N_mpc, dt, radius, arc_angle, v_nominal)
-    x0 = [5.0; 0.0; pi/2];   % for example
-
-    % --- generate reference AFTER you know start pose ---
-     x_ref = generate_spiral_reference(N_steps, N_mpc, dt, ...
-                                      0.09, 0.5, ...   % growth, angular vel
-                                      x0(1), x0(2), x0(3));
 
 
-        
-        % x0   = 5.0;     % 👈 start here
-        % y0   = 0.0;
-        % th0  = 0.0;     % face +x
-        % v_f  = 0.4;     % 0.4 m/s
-        % dy   = 2.0;     % shift up by 2 m
-        % t_s  = 5.0;     % start lane change at 5 s
-        % t_d  = 10.0;     % take 6 s to do it
-        % 
-        % x_ref = generate_lane_change_reference( ...
-        %     N_steps, N_mpc, dt, ...
-        %     x0, y0, th0, ...
-        %     v_f, dy, t_s, t_d);
+    % x0   = 0;
+    % y0   = 0;
+    % th0  = 0;        % face +x
+    % v_f  = 0.4;      % m/s
+    % L1   = 10.0;     % 10 m straight
+    % R    = 3;      % 1.5 m turn radius (nice and smooth)
+    % L2   = 15.0;     % 15 m after the turn
+    % 
+    % x_ref = generate_L_reference(N_steps, N_mpc, dt, ...
+    %     x0, y0, th0, ...
+    %     v_f, L1, R, L2);
 
-    Q_mpc = diag([10, 20, 10]);
+
+    Q_mpc = diag([40, 5, 30]);
     R_mpc = diag([0.1, 0.5]);
     S_mpc = diag([1.0, 2.0]);
-    Qf_mpc = 150 * Q_mpc;
+    Qf_mpc = 10 * Q_mpc;
 
     v_min = 0.0;
     v_max = 3.33;
@@ -73,7 +59,7 @@ function test_closed_loop_autonomy()
     du_max = [a_max * dt; alpha_max * dt];
 
     %% 3. EKF Parameters
-    x0_ekf = [radius; 0; pi/2; 0.5; 0.0; 0.0] + [0.1; 0.1; 0.05; 0.02; 0.01; 0.01];
+    % x0_ekf = [radius; 0; pi/2; 0.5; 0.0; 0.0] + [0.1; 0.1; 0.05; 0.02; 0.01; 0.01];
 
     P0_ekf = diag([0.5, 0.5, 0.2, 0.05, 0.02, 0.05].^2);
     Q_ekf = diag([1e-6, 1e-6, 0.001, 0.05, 0.05, 1e-5]);
@@ -186,50 +172,6 @@ function test_closed_loop_autonomy()
     fprintf('======================================================\n\n');
 end
 
-function x_ref = generate_circular_reference(N_steps, N_horizon, dt, radius)
-    % Generate a circular reference trajectory
-    % Robot moves counter-clockwise around a circle of given radius
-
-    N_total = N_steps + N_horizon + 1;
-    omega = 1.0 / radius;  % Constant angular velocity
-    v = omega * radius;    % Constant linear velocity
-
-    x_ref = zeros(3, N_total);
-    for k = 1:N_total
-        t = (k-1) * dt;
-        theta = pi/2 + omega * t;  % Start at top of circle
-        x = radius * cos(theta);
-        y = radius * sin(theta);
-        heading = theta + pi/2;  % Tangent to the circle (no wrap)
-        x_ref(:,k) = [x; y; heading];
-    end
-end
-
-% function x_ref = generate_spiral_reference(N_steps, N_horizon, dt, growth_rate, angular_velocity)
-%     % Generate an outward spiral reference trajectory
-%     % Robot spirals counter-clockwise with increasing radius
-%     % Starts at (x0, y0) = (radius, 0) to match robot's initial state
-% 
-%     N_total = N_steps + N_horizon + 1;
-%     x_ref = zeros(3, N_total);
-% 
-%     % Initial offset to match robot's starting position
-%     x0 = growth_rate * 0 * cos(0);  % = 0
-%     y0 = growth_rate * 0 * sin(0);  % = 0
-%     x_start = growth_rate * cos(0);  % = growth_rate
-%     y_start = 0;
-% 
-%     for k = 1:N_total
-%         t = (k-1) * dt;
-%         r = growth_rate * t;
-%         theta = angular_velocity * t;
-%         x = r * cos(theta) + (growth_rate - x_start);  % Shift to match initial X
-%         y = r * sin(theta) - y_start;                  % Shift to match initial Y
-%         heading = theta + pi/2;
-%         x_ref(:,k) = [x; y; heading];
-%     end
-% end
-
 function x_ref = generate_spiral_reference( ...
         N_steps, N_horizon, dt, growth_rate, angular_velocity, x0, y0, th0)
 
@@ -240,7 +182,8 @@ function x_ref = generate_spiral_reference( ...
         t = (k-1) * dt;
 
         r     = growth_rate * t;          % radius grows with time
-        theta = angular_velocity * t;     % spiral angle (about origin)
+       theta = angular_velocity * t;     % spiral angle (about origin)
+   
 
         % spiral point in robot-centered polar coords
         x_sp = r * cos(theta);
@@ -260,89 +203,78 @@ end
 
 
 
-
-function x_ref = generate_figure8_reference(N_steps, N_horizon, dt, a, v_nominal)
-    % Generate a figure-8 trajectory using a lemniscate of Bernoulli
-    % a: size scale (meters)
-    % v_nominal: forward velocity
-
-    N_total = N_steps + N_horizon + 1;
-    x_ref = zeros(3, N_total);
-
-    for k = 1:N_total
-        t = (k-1) * dt;
-        omega = v_nominal / a;  % Angular speed
-        theta = omega * t;
-
-        x = a * sin(theta);
-        y = a * sin(theta) * cos(theta);
-        dx_dt = a * cos(theta);
-        dy_dt = a * (cos(2*theta));
-        heading = atan2(dy_dt, dx_dt);
-
-        x_ref(:,k) = [x; y; heading];
-    end
-end
-
-function x_ref = generate_lane_change_reference( ...
+function x_ref = generate_L_reference( ...
         N_steps, N_horizon, dt, ...
         x0, y0, th0, ...
-        v_forward, dy, t_start, t_duration)
-%GENERATE_LANE_CHANGE_REFERENCE
-%   Forward in +x, then smooth lateral shift of 'dy' meters.
-%
-%   - starts exactly at [x0; y0; th0]
-%   - shift begins at t_start (s)
-%   - shift finishes at t_start + t_duration (s)
-%   - heading is tangent to the path
-%
-%   Inputs
-%     N_steps, N_horizon, dt  - like your spiral fn
-%     x0, y0, th0             - start pose
-%     v_forward               - forward speed (m/s)
-%     dy                      - total lateral change (m) (+ is to the left if th0=0)
-%     t_start                 - when to start lane change (s)
-%     t_duration              - how long to perform lane change (s)
+        v_forward, L1, turn_radius, L2)
+
+% SEGMENTS (in robot/world frame):
+% 1) go straight L1
+% 2) 90° left turn with given radius
+% 3) go straight L2
 
     N_total = N_steps + N_horizon + 1;
     x_ref   = zeros(3, N_total);
 
+    % --- segment durations ---
+    t1 = L1 / v_forward;                   % straight 1
+    turn_angle = pi/2;                     % 90 deg
+    w_turn = v_forward / turn_radius;      % kinematic: v = R * w
+    t2 = turn_angle / w_turn;              % time to do 90 deg
+    t3 = L2 / v_forward;                   % straight 2
+    T_total = t1 + t2 + t3;
+
     for k = 1:N_total
         t = (k-1) * dt;
 
-        % forward motion
-        x = x0 + v_forward * t;
-        xdot = v_forward;
-
-        % ----- lateral profile -----
-        if t < t_start
-            % before lane change
-            y    = y0;
-            ydot = 0;
-        elseif t < t_start + t_duration
-            % during lane change: smoothstep 3s^2 - 2s^3
-            tau = (t - t_start) / t_duration;   % 0 -> 1
-            % position shape
-            sigma = 3*tau^2 - 2*tau^3;
-            y = y0 + dy * sigma;
-
-            % derivative of smoothstep
-            ds_dt      = 1 / t_duration;
-            sigma_dot  = (6*tau - 6*tau^2) * ds_dt;
-            ydot = dy * sigma_dot;
-        else
-            % after lane change
-            y    = y0 + dy;
-            ydot = 0;
+        % clamp final time
+        if t > T_total
+            t = T_total;
         end
 
-        % heading along path
-        path_heading = atan2(ydot, xdot);
-        heading      = wrapToPi(path_heading + th0);
+        if t <= t1
+            % --- SEGMENT 1: straight ---
+            s = t;  % time on this segment
+            x = x0 + v_forward * s * cos(th0);
+            y = y0 + v_forward * s * sin(th0);
+            heading = th0;
+
+        elseif t <= t1 + t2
+            % --- SEGMENT 2: 90° arc to the left ---
+            s  = t - t1;            % time in turn
+            ang = w_turn * s;       % 0 -> 90deg
+
+            % center of turn is on the LEFT of current heading
+            % initial heading is th0
+            cx = x0 + L1 * cos(th0) - turn_radius * sin(th0);
+            cy = y0 + L1 * sin(th0) + turn_radius * cos(th0);
+
+            % position on arc
+            x = cx + turn_radius * sin(th0 + ang);
+            y = cy - turn_radius * cos(th0 + ang);
+
+            heading = wrapToPi(th0 + ang);
+
+        else
+            % --- SEGMENT 3: straight after turn ---
+            s  = t - (t1 + t2);     % time in segment 3
+            x_turn_end = x0 + L1 * cos(th0) ...
+                           + turn_radius * (sin(th0 + pi/2) - sin(th0));
+            y_turn_end = y0 + L1 * sin(th0) ...
+                           - turn_radius * (cos(th0 + pi/2) - cos(th0));
+
+            % after the 90° left turn, heading is th0 + 90°
+            th_straight = wrapToPi(th0 + pi/2);
+
+            x = x_turn_end + v_forward * s * cos(th_straight);
+            y = y_turn_end + v_forward * s * sin(th_straight);
+            heading = th_straight;
+        end
 
         x_ref(:,k) = [x; y; heading];
     end
 end
+
 
 
 function x_ref = generate_arc_reference(N_steps, N_horizon, dt, radius, arc_angle, v_nominal)
@@ -475,24 +407,7 @@ function plot_tracking_results(x_history, u_history, x_ref, dt, title_str, ekf_h
 
 
 end
-
-% % function err = compute_tracking_error(x_actual, x_ref)
-% %     % Compute RMSE between actual and reference positions
-% %     % Inputs:
-% %     %   x_actual - 3×N matrix of actual robot states
-% %     %   x_ref    - 3×N matrix of reference states
-% %     % Output:
-% %     %   err      - scalar RMSE over position [x; y]
-% % 
-% %     skip = 10;  % Skip first 10 steps
-% %     pos_actual = x_actual(1:2,skip:end);
-% %     pos_ref = x_ref(1:2,skip:end);
-% % 
-% %     errors_sq = (pos_actual - pos_ref).^2;
-% %     mse_per_step = sum(errors_sq, 1);
-% %     err = sqrt(mean(mse_per_step));
-% % end
-% 
+ 
 function err = compute_tracking_error(x_actual, x_ref, dt, start_time)
     % Compute RMSE using nearest-point matching after a delay
     % Inputs:
