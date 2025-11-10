@@ -27,12 +27,17 @@ Developed entirely in MATLAB, the system fuses encoder and IMU data for robust s
 
 ---
 
-## 🛠️ Getting Started
+## Getting Started
 
 ### Prerequisites
 - MATLAB R2021b or later  
 - Optimization Toolbox (for NMPC)  
-- (Optional) Control System Toolbox  
+- Control System Toolbox  
+
+### Clone the Repository
+
+git clone https://github.com/Fonyuy45/nova-carter-mpc.git
+cd nova-carter-mpc
 
 ### Setup
 ```matlab
@@ -40,8 +45,6 @@ Developed entirely in MATLAB, the system fuses encoder and IMU data for robust s
 >> cd tests
 >> test_closed_loop_autonomy_optionB
 ```
-
----
 
 ##  Features
 
@@ -53,7 +56,7 @@ Developed entirely in MATLAB, the system fuses encoder and IMU data for robust s
 - Constraint checking  
 
 ### Phase 1: EKF + NMPC Integration (Option B)
-- 5D state: `[x, y, θ, v, ω]`  
+- 5D state: `[x, y, θ, v, ω]`  including actuator dynamics
 - EKF with encoder + IMU fusion  
 - NMPC with actuator dynamics and acceleration constraints  
 - Closed-loop simulation with realistic motor lag  
