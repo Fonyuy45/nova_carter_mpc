@@ -34,14 +34,10 @@ Developed entirely in MATLAB, the system fuses encoder and IMU data for robust s
 - Optimization Toolbox (for NMPC)  
 - Control System Toolbox  
 
-### Clone the Repository
----
->> git clone https://github.com/Fonyuy45/nova-carter-mpc
->> cd nova-carter-mpc
 ---
 ### Setup
 ```matlab
->> git clone https://github.com/Fonyuy45/nova-carter-mpc
+>> git clone https://github.com/Fonyuy45/nova_carter_mpc
 >> cd nova-carter-mpc
 
 >> setup_project
