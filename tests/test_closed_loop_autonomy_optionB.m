@@ -95,14 +95,18 @@ P0_ekf = diag([0.5, 0.5, 0.2, 0.05, 0.02, 0.05].^2);
 Q_ekf = diag([1e-4, 1e-4, 1e-3, 1e-2, 1e-2, 1e-3]);  % Process noise
 R_enc = diag([0.9, 0.9]);                     % Encoder noise
 R_imu = 0.9;                                   % IMU noise
-% --- Get these values from your sensor_noise_simulator.m ---
-enc_sigma_v = 0.01;
-enc_sigma_omega = 0.005;
-imu_sigma_gyro = 0.005;
 
-% --- Set R to the SQUARE of the standard deviations ---
-R_enc = diag([enc_sigma_v^2, enc_sigma_omega^2]);  % e.g., [1e-4, 2.5e-5]
-R_imu = imu_sigma_gyro^2;
+% % --- Get these values from your sensor_noise_simulator.m ---
+% enc_sigma_v = 0.01;
+% enc_sigma_omega = 0.005;
+% imu_sigma_gyro = 0.005;
+% 
+% % --- Set R to the SQUARE of the standard deviations ---
+% R_enc = diag([enc_sigma_v^2, enc_sigma_omega^2]);  % e.g., [1e-4, 2.5e-5]
+% R_imu = imu_sigma_gyro^2;
+%     % Initialize with GPS noise
+% R_gps = diag([2.0^2, 2.0^2]);  % 2m accuracy
+
 
     %% 4. Initialization
     fprintf('  Initializing NMPC controller... ');
@@ -113,9 +117,13 @@ R_imu = imu_sigma_gyro^2;
 
     % EKF initialization (6D: [x; y; θ; v; ω; bias])
     x0_ekf = [x_ref(1:3, 1); 0; 0; 0];
+
+
+
+   % ekf = ekf_state_estimator_optionB(x0_ekf, P0, Q_ekf, R_enc, R_imu, R_gps);
     ekf = ekf_state_estimator_optionB(x0_ekf, P0_ekf, Q_ekf, R_enc, R_imu);
 
-    noise_sim = sensor_noise_simulator('low', 'low');
+    noise_sim = sensor_noise_simulator('low', 'low','low');
 
     % True state (5D for Option B: [x; y; θ; v; ω])
     x_true = zeros(5, N_steps+1);
@@ -192,7 +200,7 @@ for k = 1:N_steps
     
     tic;
     % --- MODIFIED LINE: Feed NMPC the *perfect* state ---
-    [u_cmd, ~] = nmpc.solve(x_hat_perfect, x_ref_segment, u_last);  
+    [u_cmd, ~] = nmpc.solve(x_hat, x_ref_segment, u_last);  
     solve_times(k) = toc;
 
     % ============================================================
@@ -224,23 +232,11 @@ for k = 1:N_steps
     % ============================================================
     % 5) STORE + ADVANCE
     % ============================================================
-    % pack into 5D so the rest of your code (plots, errors) still works
-    % x_true(:,k+1)        = [x_fk_next; v_true_next; omega_true_next];
-    % x_true_history(:,k+1)= x_true(:,k+1);
-    % x_hat_history(:,k+1) = x_hat;
-    % u_history(:,k)       = u_cmd;
-    % u_last               = u_cmd;
-    % 
-    % % advance the "physical" states
-    % x_fk_true  = x_fk_next;
-    % v_true     = v_true_next;
-    % omega_true = omega_true_next;
-    % x_true_5d(:,k+1) = [x_fk_next; v_true_next; omega_true_next];
-    % pack into 5D
+    
     x_true(:,k+1)        = [x_fk_next; v_true_next; omega_true_next];
     x_true_history(:,k+1)= x_true(:,k+1);
     
-    % --- MODIFIED LINE: Store the "perfect" state you used ---
+    % --- MODIFIED LINE: Store the "perfect" state used ---
     x_hat_history(:,k+1) = x_hat_perfect; 
     
     u_history(:,k)       = u_cmd;
