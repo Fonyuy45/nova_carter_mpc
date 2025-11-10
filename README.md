@@ -4,18 +4,7 @@ Model Predictive Control implementation for the NVIDIA Nova Carter differential 
 
 ## Project Overview
 
-This project implements a kinematic MPC controller for trajectory tracking on the Nova Carter AMR platform, progressing from MATLAB simulation to ROS 2 integration with Isaac Sim.
-
-**Status:** Phase 0 - Kinematic Model Implementation ✓
-
-## Development Phases
-
-- [x] **Phase 0:** Kinematic model and foundations
-- [ ] **Phase 1:** MPC controller design (MATLAB)
-- [ ] **Phase 2:** Simulation and validation
-- [ ] **Phase 3:** ROS 2 integration
-- [ ] **Phase 4:** Isaac Sim deployment
-- [ ] **Phase 5:** Hardware testing
+This project implements a kinematic MPC controller for trajectory tracking on the Nova Carter AMR platform, progressing from MATLAB simulation 
 
 ## Robot Specifications
 
@@ -25,16 +14,6 @@ This project implements a kinematic MPC controller for trajectory tracking on th
 - **Max speed:** 3.0 m/s
 - **Max angular rate:** 2.0 rad/s
 
-## Project Structure
-```
-nova_carter_mpc/
-├── params/         # Robot parameters and constants
-├── models/         # Kinematic and dynamic models
-├── trajectory/     # Reference trajectory generation
-├── controllers/    # MPC and control algorithms
-├── tests/          # Unit tests and validation
-└── simulations/    # Full simulation scripts
-```
 
 ## Getting Started
 
@@ -63,32 +42,17 @@ nova_carter_mpc/
 **State:** x = [x, y, θ]ᵀ  
 **Input:** u = [v, ω]ᵀ  
 
-**Dynamics:**
-```
-ẋ = v·cos(θ)
-ẏ = v·sin(θ)
-θ̇ = ω
-```
-
 ### Validated Features
 
 ✓ Forward/inverse kinematics  
 ✓ Wheel velocity conversions  
 ✓ Discrete-time integration (Euler & RK4)  
-✓ Reference trajectory generation (circle, figure-8, line)  
+✓ Reference trajectory generation (circle, spiral, line)  
 ✓ Constraint checking  
-
-## Next Steps
-
-- [ ] Implement nonlinear MPC controller
-- [ ] Add cost function tuning utilities
-- [ ] Implement state estimation (EKF)
-- [ ] Add obstacle avoidance
-- [ ] ROS 2 bridge integration
 
 ## Author
 
-[Your Name]  
+Dieudonne YUFONYUY 
 [LinkedIn/GitHub links]
 
 ## References
@@ -98,4 +62,4 @@ nova_carter_mpc/
 
 ## License
 
-MIT License (or whatever you choose)
+MIT License 
