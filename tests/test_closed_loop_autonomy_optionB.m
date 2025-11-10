@@ -17,7 +17,7 @@ function test_closed_loop_autonomy_optionB()
     params = nova_carter_params();
     dt = params.dt;
     
-    T_sim = 50.0;  % Match Option A duration
+    T_sim = 200.0;  % Match Option A duration
     N_steps = round(T_sim / dt);
     
     % Plant model (Option B - 5D with actuator dynamics)
@@ -26,24 +26,63 @@ function test_closed_loop_autonomy_optionB()
     plant_model.tau_omega = 0.15;   % 150ms lag
 
     %% 2. NM1PC Parameters
-    N_mpc = 20;  % Match Option A
+    N_mpc = 30;  % Match Option A
     start_time = 2.0;
 
-    x0   = 0;
-    y0   = 0;
-    th0  = 0;        % face +x
-    v_f  = 0.4;      % m/s
-    L1   = 40.0;     % 10 m straight
-    R    = 10;      % 1.5 m turn radius (nice and smooth)
-    L2   = 50.0;     % 15 m after the turn
-    % 
-    x_ref = generate_L_reference(N_steps, N_mpc, dt, ...
-        x0, y0, th0, ...
-        v_f, L1, R, L2);
-    radius = 8;
+    % x0   = 0;
+    % y0   = 0;
+    % th0  = 0;        % face +x
+    % v_f  = 0.4;      % m/s
+    % L1   = 40.0;     % 10 m straight
+    % R    = 10;      % 1.5 m turn radius (nice and smooth)
+    % L2   = 50.0;     % 15 m after the turn
+    % % 
+    % x_ref = generate_L_reference(N_steps, N_mpc, dt, ...
+    %     x0, y0, th0, ...
+    %     v_f, L1, R, L2);
+    % radius = 8;
 
     
     % x_ref = generate_circular_reference(N_steps, N_mpc, dt, radius)
+
+% % % Rectangular trajectory
+% Simulation Parameters
+
+    % Trajectory Parameters
+    x0 = 0.0;          % Start x
+    y0 = 0.0;          % Start y
+    th0 = 0.0;         % Start heading (0 rad = facing +X axis)
+    v_forward = 1.0;   % Constant speed (m/s)
+
+    % Rectangle Shape Parameters
+    L_width = 30.0;    % Width of the rectangle (m)
+    L_height = 20.0;   % Height of the rectangle (m)
+    turn_radius = 10.0; % Radius of the arc corners (m)
+
+    x_ref = generate_rectangle_reference( ...
+        N_steps, N_mpc, dt, ...
+        x0, y0, th0, ...
+        v_forward, L_width, L_height, turn_radius);
+
+    %% S trajectory
+
+
+% % Trajectory Parameters
+% x0 = 0.0;          % Start x
+% y0 = 0.0;          % Start y
+% th0 = 0.0;         % Start heading (0 rad = facing +X axis)
+% v_forward = 1.0;   % Constant speed (m/s)
+% turn_radius = 15.0; % Radius of the S-curve turns (m)
+% 
+% 
+% % --- 2. Call the Function ---
+% 
+% fprintf('Generating S-curve reference trajectory...\n');
+% x_ref = generate_S_curve_reference( ...
+%     N_steps, N_mpc, dt, ...
+%     x0, y0, th0, ...
+%     v_forward, turn_radius);
+
 
 % CRITICAL: Lift to 5D for Option B NMPC
     x_ref = lift_reference_to_5d(x_ref, dt);
@@ -75,7 +114,7 @@ function test_closed_loop_autonomy_optionB()
     %% 3. EKF Parameters (6D for Option B)
 P0_ekf = diag([0.5, 0.5, 0.2, 0.05, 0.02, 0.05].^2);
 
-Q_ekf = diag([1e-4, 1e-4, 1e-3, 1e-2, 1e-2, 1e-3]);  % Process noise
+Q_ekf = diag([1e-20, 1e-25, 1e-40, 1e-7, 1e-8, 1e-9]);  % Process noise
 R_enc = diag([0.9, 0.9]);                     % Encoder noise
 R_imu = 0.9;                                   % IMU noise
 
@@ -163,7 +202,7 @@ for k = 1:N_steps
     
     tic;
     % --- MODIFIED LINE: Feed NMPC the *perfect* state ---
-    [u_cmd, ~] = nmpc.solve(x_hat_perfect, x_ref_segment, u_last);  
+    [u_cmd, ~] = nmpc.solve(x_hat, x_ref_segment, u_last);  
     solve_times(k) = toc;
 
     % ============================================================
@@ -255,6 +294,174 @@ end
 %% ==========================================================================
 %  HELPER FUNCTIONS (Reuse from Option A)
 %  ==========================================================================
+
+function x_ref = generate_rectangle_reference( ...
+        N_steps, N_horizon, dt, ...
+        x0, y0, th0, ...
+        v_forward, L_width, L_height, turn_radius)
+% Generates a rectangular trajectory with arc-like corners.
+% The path consists of 8 segments (4 straights, 4 turns).
+% All turns are 90-degree left turns.
+%
+% SEGMENTS:
+% 1) Straight (L_width)
+% 2) 90° left turn
+% 3) Straight (L_height)
+% 4) 90° left turn
+% 5) Straight (L_width)
+% 6) 90° left turn
+% 7) Straight (L_height)
+% 8) 90° left turn (to close the loop)
+
+    N_total = N_steps + N_horizon + 1;
+    x_ref   = zeros(3, N_total);
+
+    % --- Segment durations ---
+    t_w = L_width / v_forward;
+    t_h = L_height / v_forward;
+    turn_angle = pi/2;
+    w_turn = v_forward / turn_radius;
+    t_turn = turn_angle / w_turn;
+
+    % --- Cumulative end times for each segment ---
+    T(1) = t_w;
+    T(2) = T(1) + t_turn;
+    T(3) = T(2) + t_h;
+    T(4) = T(3) + t_turn;
+    T(5) = T(4) + t_w;
+    T(6) = T(5) + t_turn;
+    T(7) = T(6) + t_h;
+    T(8) = T(7) + t_turn; % Full loop
+    T_total = T(8);
+
+    % --- Pre-calculate all 8 "anchor" poses (start of segment) ---
+    % And the 4 turn centers
+    % P(i,:) = [x, y] at the start of segment i
+    % H(i)   = heading (theta) during segment i (if straight) or at start (if turn)
+    % C(i,:) = [cx, cy] center of turn i
+    
+    P = zeros(9, 2);
+    H = zeros(9, 1);
+    C = zeros(4, 2);
+
+    % Seg 1 (Start)
+    P(1,:) = [x0, y0];
+    H(1)   = th0;
+
+    % Seg 2 (Start of Turn 1)
+    P(2,:) = P(1,:) + [L_width * cos(H(1)), L_width * sin(H(1))];
+    H(2)   = H(1);
+    C(1,:) = P(2,:) + [-turn_radius * sin(H(2)), turn_radius * cos(H(2))]; % Center is to the left
+
+    % Seg 3 (Start of Straight 2)
+    P(3,:) = [C(1,1) + turn_radius * sin(H(2) + pi/2), ...
+              C(1,2) - turn_radius * cos(H(2) + pi/2)];
+    H(3)   = wrapToPi(H(2) + pi/2);
+
+    % Seg 4 (Start of Turn 2)
+    P(4,:) = P(3,:) + [L_height * cos(H(3)), L_height * sin(H(3))];
+    H(4)   = H(3);
+    C(2,:) = P(4,:) + [-turn_radius * sin(H(4)), turn_radius * cos(H(4))];
+
+    % Seg 5 (Start of Straight 3)
+    P(5,:) = [C(2,1) + turn_radius * sin(H(4) + pi/2), ...
+              C(2,2) - turn_radius * cos(H(4) + pi/2)];
+    H(5)   = wrapToPi(H(4) + pi/2);
+
+    % Seg 6 (Start of Turn 3)
+    P(6,:) = P(5,:) + [L_width * cos(H(5)), L_width * sin(H(5))];
+    H(6)   = H(5);
+    C(3,:) = P(6,:) + [-turn_radius * sin(H(6)), turn_radius * cos(H(6))];
+
+    % Seg 7 (Start of Straight 4)
+    P(7,:) = [C(3,1) + turn_radius * sin(H(6) + pi/2), ...
+              C(3,2) - turn_radius * cos(H(6) + pi/2)];
+    H(7)   = wrapToPi(H(6) + pi/2);
+
+    % Seg 8 (Start of Turn 4)
+    P(8,:) = P(7,:) + [L_height * cos(H(7)), L_height * sin(H(7))];
+    H(8)   = H(7);
+    C(4,:) = P(8,:) + [-turn_radius * sin(H(8)), turn_radius * cos(H(8))];
+    
+    % End point (for clamping)
+    P(9,:) = P(1,:); % Should be back at start
+    H(9)   = wrapToPi(H(8) + pi/2);
+
+
+    % --- Main loop to generate trajectory ---
+    for k = 1:N_total
+        t = (k-1) * dt;
+        
+        if t > T_total
+            % Hold at final pose if time exceeds total duration
+            x_ref(:,k) = [P(9,1); P(9,2); H(9)];
+            continue;
+        end
+
+        if t <= T(1)
+            % --- SEGMENT 1: Straight (Width) ---
+            s = t;
+            x = P(1,1) + v_forward * s * cos(H(1));
+            y = P(1,2) + v_forward * s * sin(H(1));
+            heading = H(1);
+
+        elseif t <= T(2)
+            % --- SEGMENT 2: Turn 1 (Left) ---
+            s = t - T(1);
+            ang = w_turn * s;
+            x = C(1,1) + turn_radius * sin(H(2) + ang);
+            y = C(1,2) - turn_radius * cos(H(2) + ang);
+            heading = wrapToPi(H(2) + ang);
+
+        elseif t <= T(3)
+            % --- SEGMENT 3: Straight (Height) ---
+            s = t - T(2);
+            x = P(3,1) + v_forward * s * cos(H(3));
+            y = P(3,2) + v_forward * s * sin(H(3));
+            heading = H(3);
+
+        elseif t <= T(4)
+            % --- SEGMENT 4: Turn 2 (Left) ---
+            s = t - T(3);
+            ang = w_turn * s;
+            x = C(2,1) + turn_radius * sin(H(4) + ang);
+            y = C(2,2) - turn_radius * cos(H(4) + ang);
+            heading = wrapToPi(H(4) + ang);
+
+        elseif t <= T(5)
+            % --- SEGMENT 5: Straight (Width) ---
+            s = t - T(4);
+            x = P(5,1) + v_forward * s * cos(H(5));
+            y = P(5,2) + v_forward * s * sin(H(5));
+            heading = H(5);
+
+        elseif t <= T(6)
+            % --- SEGMENT 6: Turn 3 (Left) ---
+            s = t - T(5);
+            ang = w_turn * s;
+            x = C(3,1) + turn_radius * sin(H(6) + ang);
+            y = C(3,2) - turn_radius * cos(H(6) + ang);
+            heading = wrapToPi(H(6) + ang);
+
+        elseif t <= T(7)
+            % --- SEGMENT 7: Straight (Height) ---
+            s = t - T(6);
+            x = P(7,1) + v_forward * s * cos(H(7));
+            y = P(7,2) + v_forward * s * sin(H(7));
+            heading = H(7);
+
+        else % t <= T(8)
+            % --- SEGMENT 8: Turn 4 (Left) ---
+            s = t - T(7);
+            ang = w_turn * s;
+            x = C(4,1) + turn_radius * sin(H(8) + ang);
+            y = C(4,2) - turn_radius * cos(H(8) + ang);
+            heading = wrapToPi(H(8) + ang);
+        end
+        
+        x_ref(:,k) = [x; y; heading];
+    end
+end
 
 function x_ref = generate_L_reference( ...
         N_steps, N_horizon, dt, ...
@@ -553,5 +760,121 @@ function plot_ekf_estimation_error(x_history, x_ekf_history, dt)
     % 
     % fprintf('EKF RMSE:\n  e_x = %.3f m\n  e_y = %.3f m\n  e_θ = %.2f deg\n  e_v = %.3f m/s\n  e_ω = %.2f deg/s\n', ...
     %     rmse_x, rmse_y, rad2deg(rmse_theta), rmse_v, rad2deg(rmse_omega));
+end
+
+function x_ref = generate_S_curve_reference( ...
+        N_steps, N_horizon, dt, ...
+        x0, y0, th0, ...
+        v_forward, turn_radius)
+% Generates a "double S" or slalom trajectory.
+% The path consists of four continuous 180-degree turns.
+%
+% SEGMENTS:
+% 1) 180° left turn
+% 2) 180° right turn
+% 3) 180° left turn
+% 4) 180° right turn
+
+    N_total = N_steps + N_horizon + 1;
+    x_ref   = zeros(3, N_total);
+
+    % --- Segment durations ---
+    turn_angle = pi; % 180 degrees
+    w_turn = v_forward / turn_radius;
+    t_turn = turn_angle / w_turn;
+
+    % --- Cumulative end times for each segment ---
+    T = zeros(4, 1);
+    T(1) = t_turn;
+    T(2) = T(1) + t_turn;
+    T(3) = T(2) + t_turn;
+    T(4) = T(3) + t_turn;
+    T_total = T(4);
+
+    % --- Pre-calculate all 4 "anchor" poses (start of segment) ---
+    % And the 4 turn centers
+    % P(i,:) = [x, y] at the start of segment i
+    % H(i)   = heading (theta) at the start of segment i
+    % C(i,:) = [cx, cy] center of turn i
+    
+    P = zeros(5, 2); % 4 start points + 1 end point
+    H = zeros(5, 1);
+    C = zeros(4, 2);
+    r = turn_radius; % shorthand
+
+    % Seg 1 (Start)
+    P(1,:) = [x0, y0];
+    H(1)   = th0;
+    % Center is to the LEFT
+    C(1,:) = [P(1,1) - r * sin(H(1)), P(1,2) + r * cos(H(1))];
+
+    % Seg 2 (Start of Turn 2)
+    H(2)   = wrapToPi(H(1) + pi); % Finished 180-deg left turn
+    P(2,:) = [C(1,1) + r * sin(H(1) + pi), C(1,2) - r * cos(H(1) + pi)];
+    % Center is to the RIGHT
+    C(2,:) = [P(2,1) + r * sin(H(2)), P(2,2) - r * cos(H(2))];
+
+    % Seg 3 (Start of Turn 3)
+    H(3)   = wrapToPi(H(2) - pi); % Finished 180-deg right turn
+    P(3,:) = [C(2,1) - r * sin(H(2) - pi), C(2,2) + r * cos(H(2) - pi)];
+    % Center is to the LEFT
+    C(3,:) = [P(3,1) - r * sin(H(3)), P(3,2) + r * cos(H(3))];
+
+    % Seg 4 (Start of Turn 4)
+    H(4)   = wrapToPi(H(3) + pi); % Finished 180-deg left turn
+    P(4,:) = [C(3,1) + r * sin(H(3) + pi), C(3,2) - r * cos(H(3) + pi)];
+    % Center is to the RIGHT
+    C(4,:) = [P(4,1) + r * sin(H(4)), P(4,2) - r * cos(H(4))];
+
+    % End point (for clamping)
+    H(5)   = wrapToPi(H(4) - pi); % Finished 180-deg right turn
+    P(5,:) = [C(4,1) - r * sin(H(4) - pi), C(4,2) + r * cos(H(4) - pi)];
+
+
+    % --- Main loop to generate trajectory ---
+    for k = 1:N_total
+        t = (k-1) * dt;
+        
+        if t > T_total
+            % Hold at final pose if time exceeds total duration
+            x_ref(:,k) = [P(5,1); P(5,2); H(5)];
+            continue;
+        end
+
+        if t <= T(1)
+            % --- SEGMENT 1: Turn 1 (Left) ---
+            s = t;
+            ang = w_turn * s; % 0 -> pi
+            x = C(1,1) + r * sin(H(1) + ang);
+            y = C(1,2) - r * cos(H(1) + ang);
+            heading = wrapToPi(H(1) + ang);
+
+        elseif t <= T(2)
+            % --- SEGMENT 2: Turn 2 (Right) ---
+            s = t - T(1);
+            ang = -w_turn * s; % 0 -> -pi
+            x = C(2,1) - r * sin(H(2) + ang);
+            y = C(2,2) + r * cos(H(2) + ang);
+            heading = wrapToPi(H(2) + ang);
+
+        elseif t <= T(3)
+            % --- SEGMENT 3: Turn 3 (Left) ---
+            s = t - T(2);
+            ang = w_turn * s; % 0 -> pi
+            x = C(3,1) + r * sin(H(3) + ang);
+            y = C(3,2) - r * cos(H(3) + ang);
+            heading = wrapToPi(H(3) + ang);
+
+        else % t <= T(4)
+            % --- SEGMENT 4: Turn 4 (Right) ---
+            s = t - T(3);
+            ang = -w_turn * s; % 0 -> -pi
+            x = C(4,1) - r * sin(H(4) + ang);
+            y = C(4,2) + r * cos(H(4) + ang);
+            heading = wrapToPi(H(4) + ang);
+        end
+        
+        x_ref(:,k) = [x; y; heading];
+    end
 end
 
