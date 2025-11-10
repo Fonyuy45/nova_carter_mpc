@@ -36,7 +36,7 @@ Developed entirely in MATLAB, the system fuses encoder and IMU data for robust s
 
 ### Clone the Repository
 ---
->> git clone https://github.com/Fonyuy45/nova-carter-mpc.git
+>> git clone https://github.com/Fonyuy45/nova-carter-mpc
 >> cd nova-carter-mpc
 ---
 ### Setup
