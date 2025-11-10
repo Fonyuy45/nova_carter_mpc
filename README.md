@@ -1,4 +1,4 @@
-# Nova Carter MPC Controller
+# Nonlinear MPC Control of the Nova Carter robot
 
 Model Predictive Control and State Estimation for the NVIDIA Nova Carter differential-drive robot, implemented and validated in MATLAB.
 
