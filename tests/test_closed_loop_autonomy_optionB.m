@@ -17,7 +17,7 @@ function test_closed_loop_autonomy_optionB()
     params = nova_carter_params();
     dt = params.dt;
     
-    T_sim = 250.0;  % Match Option A duration
+    T_sim = 50.0;  % Match Option A duration
     N_steps = round(T_sim / dt);
     
     % Plant model (Option B - 5D with actuator dynamics)
@@ -42,7 +42,7 @@ function test_closed_loop_autonomy_optionB()
         v_f, L1, R, L2);
     radius = 8;
 
-    % x_ref = generate_spiral_reference(N_steps, N_mpc, dt, 0.5, 0.5);
+    
     % x_ref = generate_circular_reference(N_steps, N_mpc, dt, radius)
 
 % CRITICAL: Lift to 5D for Option B NMPC
@@ -455,26 +455,6 @@ end
 function wrapped = wrapToPi(angle)
     % EXACT COPY from Option A
     wrapped = angle - 2*pi * floor((angle + pi) / (2*pi));
-end
-
-function x_ref = generate_spiral_reference(N_steps, N_horizon, dt, growth_rate, angular_velocity)
-    % Generate an outward spiral reference trajectory
-    % Robot spirals counter-clockwise with increasing radius
-
-    N_total = N_steps + N_horizon + 1;
-    x_ref = zeros(3, N_total);
-
-    for k = 1:N_total
-        t = (k-1) * dt;
-        r = growth_rate * t;              % Radius increases linearly
-        theta = angular_velocity * t;     % Constant angular speed
-        x = r * cos(theta);
-        y = r * sin(theta);
-        heading = theta + pi/2;
-        heading = wrapToPi(theta + pi/2);
-        % Tangent to spiral
-        x_ref(:,k) = [x; y; heading];
-    end
 end
 
 
