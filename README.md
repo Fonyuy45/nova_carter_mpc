@@ -1,6 +1,6 @@
-# Nonlinear MPC Control of the Nova Carter robot
+# Nonlinear MPC Control of a Differential Drive Robot
 
-Model Predictive Control and State Estimation for the NVIDIA Nova Carter differential-drive robot, implemented and validated in MATLAB.
+Model Predictive Control and Extended Kalman Filter based Sensor Fusion (wheel odometry and IMU) / State Estimation for the NVIDIA Nova Carter differential-drive robot, implemented and validated in MATLAB.
 
 <img width="393" height="234" alt="image" src="https://github.com/user-attachments/assets/7f1a5b6a-21f7-4c89-b6f7-e748f0e85004" />
 
