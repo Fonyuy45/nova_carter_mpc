@@ -153,7 +153,7 @@ classdef differential_drive_model
                  0,          1];
         end
         
-
+        % Inverse kinematics
         function [phi_dot_L, phi_dot_R] = convert_to_wheel_speeds(obj, u_cmd)
             v = u_cmd(1);
             omega = u_cmd(2);

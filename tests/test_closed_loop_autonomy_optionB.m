@@ -4,7 +4,7 @@
 %   Complete closed-loop test for Option B (actuator dynamics)
 %   ALIGNED WITH: test_closed_loop_autonomy.m (Option A)
 %
-% AUTHOR: Nova Carter NMPC Team
+% AUTHOR: Dieudonné
 % DATE: November 2025
 
 function test_closed_loop_autonomy_optionB()
@@ -17,7 +17,7 @@ function test_closed_loop_autonomy_optionB()
     params = nova_carter_params();
     dt = params.dt;
     
-    T_sim = 90.0;  % Match Option A duration
+    T_sim = 250.0;  % Match Option A duration
     N_steps = round(T_sim / dt);
     
     % Plant model (Option B - 5D with actuator dynamics)
@@ -26,7 +26,7 @@ function test_closed_loop_autonomy_optionB()
     plant_model.tau_omega = 0.15;   % 150ms lag
 
     %% 2. NM1PC Parameters
-    N_mpc = 15;  % Match Option A
+    N_mpc = 20;  % Match Option A
     start_time = 2.0;
 
     x0   = 0;
@@ -37,13 +37,13 @@ function test_closed_loop_autonomy_optionB()
     R    = 10;      % 1.5 m turn radius (nice and smooth)
     L2   = 50.0;     % 15 m after the turn
     % 
-    % x_ref = generate_L_reference(N_steps, N_mpc, dt, ...
-    %     x0, y0, th0, ...
-    %     v_f, L1, R, L2);
+    x_ref = generate_L_reference(N_steps, N_mpc, dt, ...
+        x0, y0, th0, ...
+        v_f, L1, R, L2);
     radius = 8;
 
-    x_ref = generate_spiral_reference(N_steps, N_mpc, dt, 0.5, 0.5);
-    x_ref = generate_circular_reference(N_steps, N_mpc, dt, radius)
+    % x_ref = generate_spiral_reference(N_steps, N_mpc, dt, 0.5, 0.5);
+    % x_ref = generate_circular_reference(N_steps, N_mpc, dt, radius)
 
 % CRITICAL: Lift to 5D for Option B NMPC
     x_ref = lift_reference_to_5d(x_ref, dt);
@@ -75,37 +75,10 @@ function test_closed_loop_autonomy_optionB()
     %% 3. EKF Parameters (6D for Option B)
 P0_ekf = diag([0.5, 0.5, 0.2, 0.05, 0.02, 0.05].^2);
 
-% % Increase Q_bias to tell the filter the bias is "drifty"
-% Q_ekf = diag([
-%     1e-5;   % x
-%     1e-5;   % y
-%     1e-1;   % θ
-%     1e-4;   % v
-%     1e-4;   % ω
-%     1e-4    % bias (Increased from 1e-5)
-% ]);
-% 
-% % AGGRESSIVELY INFLATE R (The Key Fix)
-% % Tell the filter the sensors are 5-10x noisier than they are.
-% R_enc = diag([0.1^2, 0.05^2]);  % Was [0.05, 0.02]
-% R_imu = 0.05^2;                % Was 0.02
-
-
-
 Q_ekf = diag([1e-4, 1e-4, 1e-3, 1e-2, 1e-2, 1e-3]);  % Process noise
 R_enc = diag([0.9, 0.9]);                     % Encoder noise
 R_imu = 0.9;                                   % IMU noise
 
-% % --- Get these values from your sensor_noise_simulator.m ---
-% enc_sigma_v = 0.01;
-% enc_sigma_omega = 0.005;
-% imu_sigma_gyro = 0.005;
-% 
-% % --- Set R to the SQUARE of the standard deviations ---
-% R_enc = diag([enc_sigma_v^2, enc_sigma_omega^2]);  % e.g., [1e-4, 2.5e-5]
-% R_imu = imu_sigma_gyro^2;
-%     % Initialize with GPS noise
-% R_gps = diag([2.0^2, 2.0^2]);  % 2m accuracy
 
 
     %% 4. Initialization
@@ -160,8 +133,8 @@ for k = 1:N_steps
     % ============================================================
     % 1) SENSOR MEASUREMENTS (from *actual* v, ω)
     % ============================================================
-    z_enc = noise_sim.add_encoder_noise(v_true, omega_true)*0000001;
-    z_imu = noise_sim.add_imu_noise(omega_true, k*dt)*0000001;
+    z_enc = noise_sim.add_encoder_noise(v_true, omega_true)*0001;
+    z_imu = noise_sim.add_imu_noise(omega_true, k*dt)*0001;
 
     % ============================================================
     % 2) EKF: predict with last command, then update with sensors
@@ -176,16 +149,6 @@ for k = 1:N_steps
     % ============================================================
     % 3) NMPC: compute next command from estimate
     % ============================================================
-    % k_end = min(k + N_mpc, size(x_ref, 2));
-    % x_ref_segment = x_ref(:, k:k_end);
-    % if size(x_ref_segment, 2) < N_mpc + 1
-    %     n_pad = N_mpc + 1 - size(x_ref_segment, 2);
-    %     x_ref_segment = [x_ref_segment, repmat(x_ref_segment(:,end), 1, n_pad)];
-    % end
-    % 
-    % tic;
-    % [u_cmd, ~] = nmpc.solve(x_hat, x_ref_segment, u_last);  % u_cmd = [v_cmd; ω_cmd]
-    % solve_times(k) = toc;
 
     % --- NEW LINE: Create the "perfect state" for the NMPC ---
     % This is the state of the robot at the *start* of the step
@@ -200,7 +163,7 @@ for k = 1:N_steps
     
     tic;
     % --- MODIFIED LINE: Feed NMPC the *perfect* state ---
-    [u_cmd, ~] = nmpc.solve(x_hat, x_ref_segment, u_last);  
+    [u_cmd, ~] = nmpc.solve(x_hat_perfect, x_ref_segment, u_last);  
     solve_times(k) = toc;
 
     % ============================================================
@@ -232,7 +195,7 @@ for k = 1:N_steps
     % ============================================================
     % 5) STORE + ADVANCE
     % ============================================================
-    
+
     x_true(:,k+1)        = [x_fk_next; v_true_next; omega_true_next];
     x_true_history(:,k+1)= x_true(:,k+1);
     
