@@ -2,6 +2,12 @@
 
 Model Predictive Control and State Estimation for the NVIDIA Nova Carter differential-drive robot, implemented and validated in MATLAB.
 
+## Tracking Rectangular Trajectory with curved corners
+
+<img width="1644" height="884" alt="image" src="https://github.com/user-attachments/assets/0eee919c-23e6-4303-872c-0c50a8478ecb" />
+
+<img width="1344" height="898" alt="image" src="https://github.com/user-attachments/assets/2366af41-09da-45c5-9a44-917314317f27" />
+
 ##  Project Overview
 
 This project simulates closed-loop autonomy for the Nova Carter AMR platform using:
