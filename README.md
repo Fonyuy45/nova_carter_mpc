@@ -1,9 +1,9 @@
 # Nova Carter MPC Controller
 
-<img width="393" height="234" alt="image" src="https://github.com/user-attachments/assets/b037eb9b-83ab-4135-9c2c-066bf6ffdc2c" />
-
-
 Model Predictive Control and State Estimation for the NVIDIA Nova Carter differential-drive robot, implemented and validated in MATLAB.
+
+<img width="393" height="234" alt="image" src="https://github.com/user-attachments/assets/7f1a5b6a-21f7-4c89-b6f7-e748f0e85004" />
+
 
 ## Tracking Rectangular Trajectory with curved corners
 
