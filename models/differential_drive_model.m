@@ -4,11 +4,15 @@
 classdef differential_drive_model
     properties
         params  % nova_carter_params object
+        tau_v       % Linear velocity time constant (s)
+        tau_omega   % Angular velocity time constant (s)
     end
     
     methods
         function obj = differential_drive_model()
             obj.params = nova_carter_params;
+            obj.tau_v = 0.2;        % 200ms for linear velocity (conservative)
+            obj.tau_omega = 0.15;   % 150ms for angular velocity (faster steering)
         end
         
         function x_next = dynamics_continuous(obj, x, u)
@@ -31,6 +35,7 @@ classdef differential_drive_model
             x_next = [x_dot; y_dot; theta_dot];
         end
         
+
         function x_next = dynamics_discrete(obj, x, u)
             % Discrete-time dynamics using forward Euler
             % x_{k+1} = x_k + f(x_k, u_k) * dt
@@ -55,6 +60,79 @@ classdef differential_drive_model
             
             x_next = x + dt/6 * (k1 + 2*k2 + 2*k3 + k4);
             x_next(3) = obj.params.wrapToPi(x_next(3));
+        end
+
+        
+        function x_next = dynamics_discrete_with_actuators(obj, x, u_cmd)
+            % Discrete-time dynamics with first-order actuator lag (Option B)
+            %
+            % INPUTS:
+            %   x     - Current state [x; y; θ; v; ω] (5x1)
+            %   u_cmd - Control commands [v_cmd; ω_cmd] (2x1)
+            %
+            % OUTPUT:
+            %   x_next - Next state (5x1)
+            %
+            % DYNAMICS:
+            %   Position/heading: Standard kinematic model (using current v, ω)
+            %   Velocities: First-order lag → τ·v̇ = (v_cmd - v)
+            %
+            % DISCRETE FORM:
+            %   v_{k+1} = α·v_cmd + (1-α)·v_k,  where α = Δt/(τ + Δt)
+            
+            % ===== Input Validation =====
+            if length(x) ~= 5
+                error('dynamics_discrete_with_actuators: State must be 5D [x; y; θ; v; ω]');
+            end
+            
+            if length(u_cmd) ~= 2
+                error('dynamics_discrete_with_actuators: Control must be 2D [v_cmd; ω_cmd]');
+            end
+            
+            % Check if actuator time constants are set
+            if isempty(obj.tau_v) || isempty(obj.tau_omega)
+                error(['dynamics_discrete_with_actuators: Actuator time constants not set!\n' ...
+                       'Set model.tau_v and model.tau_omega before calling this method.']);
+            end
+            
+            % ===== Extract States =====
+            x_pos = x(1);
+            y_pos = x(2);
+            theta = x(3);
+            v = x(4);
+            omega = x(5);
+            
+            % ===== Extract Commands =====
+            v_cmd = u_cmd(1);
+            omega_cmd = u_cmd(2);
+            
+            % ===== Time Step =====
+            dt = obj.params.dt;
+            
+            % ===== Kinematic Update =====
+            % CRITICAL: Use CURRENT velocities (v, ω), NOT commands!
+            % This is the key difference from Option A
+            x_next_pos = x_pos + v * cos(theta) * dt;
+            y_next_pos = y_pos + v * sin(theta) * dt;
+            theta_next = theta + omega * dt;
+            
+            % ===== Actuator Dynamics (First-Order Filter) =====
+            % Exponential smoothing: x_new = α·x_target + (1-α)·x_current
+            % Transfer function: H(s) = 1 / (τs + 1)
+            % Discrete equivalent: H(z) with α = Δt / (τ + Δt)
+            
+            alpha_v = dt / (obj.tau_v + dt);
+            alpha_omega = dt / (obj.tau_omega + dt);
+            
+            v_next = alpha_v * v_cmd + (1 - alpha_v) * v;
+            omega_next = alpha_omega * omega_cmd + (1 - alpha_omega) * omega;
+            
+            % ===== Assemble Next State =====
+            x_next = [x_next_pos; y_next_pos; theta_next; v_next; omega_next];
+            
+            % Note: We don't wrap theta_next here because Option B typically
+            % works with unwrapped angles for smoother optimization.
+            % Wrapping is done in the controller or plotting functions.
         end
         
         function [A, B] = linearize(obj, x, u)
