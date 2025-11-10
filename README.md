@@ -1,7 +1,3 @@
-Absolutely, Dieudonne — your README already sets a solid foundation. Let’s elevate it to reflect your full achievements, including the EKF and NMPC integration, while keeping it concise, professional, and realistic for MATLAB-based development.
-
----
-
 # Nova Carter MPC Controller
 
 Model Predictive Control and State Estimation for the NVIDIA Nova Carter differential-drive robot, implemented and validated in MATLAB.
