@@ -1,4 +1,4 @@
-# Nonlinear Model Predictive Control of a Differential Drive Robot in MATLAB, with Extended Kalman Filter based Sensor Fusion and State Estimation 
+# Nonlinear Model Predictive Control (MPC) of a Differential Drive Robot in MATLAB, with Extended Kalman Filter based Sensor Fusion and State Estimation 
 
 Model Predictive Control and Extended Kalman Filter based Sensor Fusion (wheel odometry and IMU) / State Estimation for the NVIDIA Nova Carter differential-drive robot, implemented and validated in MATLAB.
 
